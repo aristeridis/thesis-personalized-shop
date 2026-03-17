@@ -12,4 +12,7 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
     List<UserInteraction> findByUserId(Long userId);
 
     List<UserInteraction> findByProductId(Long productId);
+
+    List<UserInteraction> findByUserIdOrderByTimestampDesc(Long userId);
+
 }

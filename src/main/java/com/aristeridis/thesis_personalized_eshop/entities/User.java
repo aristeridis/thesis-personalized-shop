@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
-@Data // Το Lombok φτιάχνει αυτόματα Getters/Setters!
+@Data
 public class User {
 
     @Id
@@ -21,7 +21,7 @@ public class User {
 
     private String firstName;
     private String lastName;
-    private String role; // π.χ. 'USER', 'ADMIN'
+    private String role;
 
     @Column(updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();

@@ -22,9 +22,8 @@ public class UserInteraction {
     private Product product;
 
     @Column(nullable = false)
-    private String interactionType; // π.χ. 'VIEW', 'CART', 'PURCHASE', 'RATING'
-
-    private Integer ratingScore; // 1-5 αστέρια (αν υπάρχει)
+    private String interactionType;
+    private Integer ratingScore;
 
     private LocalDateTime timestamp = LocalDateTime.now();
 }
