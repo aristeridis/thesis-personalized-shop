@@ -6,60 +6,61 @@ import com.aristeridis.thesis_personalized_eshop.repositories.ProductRepository;
 import com.aristeridis.thesis_personalized_eshop.repositories.UserInteractionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class RecommendationService {
 
-    private final UserInteractionRepository interactionRepository;
-    private final ProductRepository productRepository;
+    @Autowired
+    private UserInteractionRepository interactionRepository;
 
     @Autowired
-    public RecommendationService(UserInteractionRepository interactionRepository, ProductRepository productRepository) {
-        this.interactionRepository = interactionRepository;
-        this.productRepository = productRepository;
-    }
+    private ProductRepository productRepository;
 
     public List<Product> getRecommendationsForUser(Long userId) {
-        List<UserInteraction> userInteractions = interactionRepository.findByUserIdOrderByTimestampDesc(userId);
+        List<UserInteraction> history = interactionRepository.findByUserId(userId);
 
-        if (userInteractions.isEmpty()) {
-            return productRepository.findAll().stream().limit(4).collect(Collectors.toList());
-        }
+        Map<Long, Integer> categoryScores = new HashMap<>();
+        List<Long> interactedProductIds = new ArrayList<>();
 
-        Set<Long> seenProductIds = userInteractions.stream()
-                .map(interaction -> interaction.getProduct().getId())
-                .collect(Collectors.toSet());
+        for (UserInteraction interaction : history) {
+            Product p = interaction.getProduct();
+            interactedProductIds.add(p.getId());
 
-        Long lastViewedProductId = userInteractions.get(0).getProduct().getId();
+            Long categoryId = p.getCategoryId();
+            int currentScore = categoryScores.getOrDefault(categoryId, 0);
 
-        List<UserInteraction> othersInteractions = interactionRepository.findByProductId(lastViewedProductId);
-
-        Set<Long> similarUserIds = othersInteractions.stream()
-                .map(interaction -> interaction.getUser().getId())
-                .filter(id -> !id.equals(userId)) // Εξαιρούμε τον εαυτό μας
-                .collect(Collectors.toSet());
-
-        Set<Product> recommendedProducts = new HashSet<>();
-        for (Long similarUserId : similarUserIds) {
-            List<UserInteraction> similarUserHistory = interactionRepository.findByUserIdOrderByTimestampDesc(similarUserId);
-            for (UserInteraction interaction : similarUserHistory) {
-                Product potentialProduct = interaction.getProduct();
-                if (!seenProductIds.contains(potentialProduct.getId())) {
-                    recommendedProducts.add(potentialProduct);
-                }
+            if ("CART".equals(interaction.getInteractionType())) {
+                categoryScores.put(categoryId, currentScore + 1);
+            } else if ("PURCHASE".equals(interaction.getInteractionType())) {
+                categoryScores.put(categoryId, currentScore + 2);
             }
         }
 
-        if (recommendedProducts.isEmpty()) {
-            return productRepository.findAll().stream()
-                    .filter(p -> !seenProductIds.contains(p.getId()))
-                    .limit(4)
-                    .collect(Collectors.toList());
+        if (categoryScores.isEmpty()) {
+            return new ArrayList<>();
         }
 
-        return recommendedProducts.stream().limit(4).collect(Collectors.toList());
+        Long topCategoryId = null;
+        int maxScore = -1;
+        for (Map.Entry<Long, Integer> entry : categoryScores.entrySet()) {
+            if (entry.getValue() > maxScore) {
+                maxScore = entry.getValue();
+                topCategoryId = entry.getKey();
+            }
+        }
+        List<Product> recommendedProducts = new ArrayList<>();
+        List<Product> categoryProducts = productRepository.findByCategoryId(topCategoryId);
+
+        for (Product p : categoryProducts) {
+            if (!interactedProductIds.contains(p.getId())) {
+                recommendedProducts.add(p);
+            }
+        }
+
+        return recommendedProducts;
     }
 }

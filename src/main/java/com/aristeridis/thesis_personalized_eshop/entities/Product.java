@@ -22,6 +22,9 @@ public class Product {
     @Column(nullable = false)
     private BigDecimal price;
 
+    @Column(name = "category_id")
+    private Long categoryId;
+
     private Integer stockQuantity;
     private String imageUrl;
 }
